@@ -1,0 +1,18 @@
+# Render service configuration for the backend (helper file).
+# This file declares a simple Node web service that starts with `node backend.js`.
+# Do NOT store secrets here — set secrets (SMTP, Cloudinary, etc.) in the Render dashboard.
+
+services:
+  - type: web
+    name: threadwise-backend
+    env: node
+    plan: free
+    branch: main
+    buildCommand: npm ci
+    startCommand: node backend.js
+    autoDeploy: true
+
+# Reminder: set these environment variables in Render's dashboard (not in this repo):
+# APP_URL=https://<your-vercel-domain>
+# SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
+# CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
