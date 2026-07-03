@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
+import Register from './pages/Register'
 import Recommend from './pages/Recommend'
 import Training from './pages/Training'
 import Analysis from './pages/Analysis'
@@ -57,9 +58,31 @@ export default function App() {
     setCurrentPage('home')
   }
 
+  const handleRegister = () => {
+    setCurrentPage('login')
+  }
+
+  const handleNavigate = (page) => {
+    if (page === 'register') {
+      setCurrentPage('register')
+      return
+    }
+
+    if (protectedPages.includes(page) && !isAuthenticated) {
+      setCurrentPage('login')
+      return
+    }
+
+    setCurrentPage(page)
+  }
+
   const renderPage = () => {
     if (!isAuthenticated && currentPage === 'login') {
       return <Login onLogin={handleLogin} onNavigate={handleNavigate} />
+    }
+
+    if (!isAuthenticated && currentPage === 'register') {
+      return <Register onRegister={handleRegister} onNavigate={handleNavigate} />
     }
 
     if (!isAuthenticated && currentPage === 'reset-password') {
