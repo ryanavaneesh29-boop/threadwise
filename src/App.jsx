@@ -65,20 +65,6 @@ export default function App() {
     setCurrentPage('login')
   }
 
-  const handleNavigate = (page) => {
-    if (page === 'register') {
-      setCurrentPage('register')
-      return
-    }
-
-    if (protectedPages.includes(page) && !isAuthenticated) {
-      setCurrentPage('login')
-      return
-    }
-
-    setCurrentPage(page)
-  }
-
   const renderPage = () => {
     if (!isAuthenticated && currentPage === 'login') {
       return <Login onLogin={handleLogin} onNavigate={handleNavigate} />
