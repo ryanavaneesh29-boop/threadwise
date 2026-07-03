@@ -44,6 +44,11 @@ export const registerUser = async (email, password) => {
   return { email: normalizedEmail }
 }
 
+export const getUserByEmail = (email) => {
+  const normalizedEmail = email.trim().toLowerCase()
+  return getStoredUsers().find((user) => user.email === normalizedEmail) || null
+}
+
 export const verifyLogin = async (email, password) => {
   const normalizedEmail = email.trim().toLowerCase()
   const users = getStoredUsers()

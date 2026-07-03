@@ -7,6 +7,7 @@ import Training from './pages/Training'
 import Analysis from './pages/Analysis'
 import ResetPassword from './pages/ResetPassword'
 import AppNav from './components/AppNav'
+import { getUserByEmail } from './utils/auth'
 
 const protectedPages = ['recommend', 'training', 'analysis']
 
@@ -18,14 +19,16 @@ export default function App() {
     const search = new URLSearchParams(window.location.search)
     const resetToken = search.get('reset-token')
     const loggedIn = localStorage.getItem('threadwise-logged-in') === 'true'
-    setIsAuthenticated(loggedIn)
+    const email = localStorage.getItem('threadwise-user-email') || ''
+    const hasRegisteredUser = email && getUserByEmail(email)
+    setIsAuthenticated(loggedIn && Boolean(hasRegisteredUser))
 
     if (resetToken) {
       setCurrentPage('reset-password')
       return
     }
 
-    if (!loggedIn && protectedPages.includes(currentPage)) {
+    if (!(loggedIn && Boolean(hasRegisteredUser)) && protectedPages.includes(currentPage)) {
       setCurrentPage('login')
     }
   }, [])
