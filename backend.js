@@ -15,6 +15,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
+import { v2 as cloudinary } from 'cloudinary';
 import nodemailer from 'nodemailer';
 
 dotenv.config();
@@ -42,6 +43,37 @@ const mailTransporter = process.env.SMTP_HOST
       }
     })
   : null;
+
+const cloudinaryEnabled = Boolean(
+  process.env.CLOUDINARY_CLOUD_NAME &&
+  process.env.CLOUDINARY_API_KEY &&
+  process.env.CLOUDINARY_API_SECRET
+);
+
+if (cloudinaryEnabled) {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+  });
+}
+
+async function uploadToCloudinary(localPath, folder) {
+  if (!cloudinaryEnabled) {
+    return null;
+  }
+
+  const uploaded = await cloudinary.uploader.upload(localPath, {
+    folder,
+    resource_type: 'image',
+    use_filename: true,
+    unique_filename: true,
+    overwrite: false
+  });
+
+  await fs.unlink(localPath).catch(() => null);
+  return uploaded;
+}
 
 app.post('/api/auth/reset-password', async (req, res) => {
   try {
@@ -145,14 +177,22 @@ app.post('/api/models/train', upload.array('images', 100), async (req, res) => {
     }
 
     // Store training data
-    const training = {
-      modelId,
-      images: req.files.map((file, index) => ({
+    const images = [];
+    for (const [index, file] of req.files.entries()) {
+      const uploaded = await uploadToCloudinary(file.path, 'threadwise/training');
+      images.push({
         path: file.path,
         label: labels[index],
         originalName: file.originalname,
-        mimetype: file.mimetype
-      })),
+        mimetype: file.mimetype,
+        cloudinaryUrl: uploaded?.secure_url || null,
+        cloudinaryPublicId: uploaded?.public_id || null
+      });
+    }
+
+    const training = {
+      modelId,
+      images,
       createdAt: new Date().toISOString(),
       accuracy: 0.85 + Math.random() * 0.1, // Simulated accuracy
       samplesCount: req.files.length
@@ -191,6 +231,15 @@ app.post('/api/models/predict', upload.single('image'), async (req, res) => {
     const model = trainingData.get(modelId);
 
     // Simulate prediction (in production, use actual ML model)
+    const uploaded = await uploadToCloudinary(req.file.path, 'threadwise/predictions');
+    const fileRecord = {
+      path: req.file.path,
+      originalName: req.file.originalname,
+      mimetype: req.file.mimetype,
+      cloudinaryUrl: uploaded?.secure_url || null,
+      cloudinaryPublicId: uploaded?.public_id || null
+    };
+
     const prediction = {
       clothing: {
         type: ['Shirt', 'Pants', 'Jacket', 'Shoes'][Math.floor(Math.random() * 4)],
@@ -199,6 +248,7 @@ app.post('/api/models/predict', upload.single('image'), async (req, res) => {
         pattern: ['Solid', 'Striped', 'Plaid'][Math.floor(Math.random() * 3)]
       },
       confidence: 0.8 + Math.random() * 0.2,
+      image: fileRecord,
       similar: model.images.slice(0, 3).map(img => ({
         label: img.label,
         similarity: 0.7 + Math.random() * 0.25

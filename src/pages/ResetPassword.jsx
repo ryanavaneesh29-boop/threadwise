@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react'
 
-const apiBase = import.meta.env.VITE_API_BASE || 'http://localhost:5000'
+const rawApiUrl = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL
+const apiBase = rawApiUrl
+  ? rawApiUrl.replace(/\/api\/?$/, '')
+  : 'http://localhost:5000'
 
 export default function ResetPassword({ onNavigate }) {
   const [stage, setStage] = useState('request')
@@ -14,7 +17,7 @@ export default function ResetPassword({ onNavigate }) {
 
   useEffect(() => {
     const search = new URLSearchParams(window.location.search)
-    const resetToken = search.get('reset-token')
+    const resetToken = search.get('token') || search.get('reset-token')
     if (resetToken) {
       setToken(resetToken)
       setStage('confirm')

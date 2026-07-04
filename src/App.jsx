@@ -6,8 +6,9 @@ import Recommend from './pages/Recommend'
 import Training from './pages/Training'
 import Analysis from './pages/Analysis'
 import ResetPassword from './pages/ResetPassword'
+import PrivacyPolicy from './pages/PrivacyPolicy'
 import AppNav from './components/AppNav'
-import { getUserByEmail } from './utils/auth'
+import { deleteUserByEmail, getAuthSession, getUserByEmail, hasSupabase, signOut } from './utils/auth'
 
 const protectedPages = ['recommend', 'training', 'analysis']
 
@@ -16,21 +17,26 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   useEffect(() => {
-    const search = new URLSearchParams(window.location.search)
-    const resetToken = search.get('reset-token')
-    const loggedIn = localStorage.getItem('threadwise-logged-in') === 'true'
-    const email = localStorage.getItem('threadwise-user-email') || ''
-    const hasRegisteredUser = email && getUserByEmail(email)
-    setIsAuthenticated(loggedIn && Boolean(hasRegisteredUser))
+    const initializeAuth = async () => {
+      const search = new URLSearchParams(window.location.search)
+      const resetToken = search.get('token') || search.get('reset-token')
+      const session = hasSupabase ? await getAuthSession() : null
+      const loggedIn = session || localStorage.getItem('threadwise-logged-in') === 'true'
+      const email = localStorage.getItem('threadwise-user-email') || ''
+      const hasRegisteredUser = email && getUserByEmail(email)
+      setIsAuthenticated(Boolean(loggedIn && hasRegisteredUser))
 
-    if (resetToken) {
-      setCurrentPage('reset-password')
-      return
+      if (resetToken) {
+        setCurrentPage('reset-password')
+        return
+      }
+
+      if (!(loggedIn && Boolean(hasRegisteredUser)) && protectedPages.includes(currentPage)) {
+        setCurrentPage('login')
+      }
     }
 
-    if (!(loggedIn && Boolean(hasRegisteredUser)) && protectedPages.includes(currentPage)) {
-      setCurrentPage('login')
-    }
+    initializeAuth()
   }, [])
 
   useEffect(() => {
@@ -54,18 +60,48 @@ export default function App() {
     setCurrentPage('recommend')
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOut()
     localStorage.removeItem('threadwise-logged-in')
     localStorage.removeItem('threadwise-user-email')
     setIsAuthenticated(false)
     setCurrentPage('home')
   }
 
-  const handleRegister = () => {
-    setCurrentPage('login')
+  const handleRegister = (email) => {
+    localStorage.setItem('threadwise-user-email', email)
+    localStorage.setItem('threadwise-logged-in', 'true')
+    setIsAuthenticated(true)
+    setCurrentPage('recommend')
+  }
+
+  const handleDeleteAccount = () => {
+    const email = localStorage.getItem('threadwise-user-email') || ''
+    if (email) {
+      deleteUserByEmail(email)
+    }
+
+    localStorage.removeItem('threadwise-user-email')
+    localStorage.removeItem('threadwise-logged-in')
+    localStorage.removeItem('threadwise-favorites')
+    localStorage.removeItem('threadwise-history')
+    localStorage.removeItem('threadwise-style-feedback')
+
+    setIsAuthenticated(false)
+    setCurrentPage('home')
   }
 
   const renderPage = () => {
+    if (currentPage === 'privacy') {
+      return (
+        <PrivacyPolicy
+          onNavigate={handleNavigate}
+          onDeleteAccount={handleDeleteAccount}
+          isAuthenticated={isAuthenticated}
+        />
+      )
+    }
+
     if (!isAuthenticated && currentPage === 'login') {
       return <Login onLogin={handleLogin} onNavigate={handleNavigate} />
     }

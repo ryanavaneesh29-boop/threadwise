@@ -8,6 +8,7 @@ export default function AppNav({ currentPage, onNavigate, onLogout }) {
         { key: 'recommend', label: 'Recommend' },
         { key: 'training', label: 'Training' },
         { key: 'analysis', label: 'Analysis' },
+        { key: 'privacy', label: 'Privacy' }
       ].map((link) => (
         <button
           key={link.key}

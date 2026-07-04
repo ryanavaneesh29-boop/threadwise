@@ -42,12 +42,16 @@ export default function Register({ onRegister, onNavigate }) {
 
     setLoading(true)
     try {
-      await registerUser(email, password)
-      setMessage('Account created successfully. Please sign in.')
-      setEmail('')
-      setPassword('')
-      setConfirm('')
-      setAgreed(false)
+      const registeredUser = await registerUser(email, password)
+      if (registeredUser?.email) {
+        onRegister?.(registeredUser.email)
+      } else {
+        setMessage('Account created successfully. Please sign in.')
+        setEmail('')
+        setPassword('')
+        setConfirm('')
+        setAgreed(false)
+      }
     } catch (err) {
       setError(err.message || 'Unable to register. Please try again.')
     } finally {
@@ -124,17 +128,26 @@ export default function Register({ onRegister, onNavigate }) {
                   />
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-start gap-3">
                   <input
                     type="checkbox"
                     checked={agreed}
                     onChange={(event) => setAgreed(event.target.checked)}
                     id="gdpr-consent"
-                    className="h-5 w-5 rounded-md border border-slate-700 bg-slate-800 text-cyan-500 focus:ring-cyan-500"
+                    className="mt-1 h-5 w-5 rounded-md border border-slate-700 bg-slate-800 text-cyan-500 focus:ring-cyan-500"
                   />
-                  <label htmlFor="gdpr-consent" className="text-sm leading-6 text-slate-300">
-                    I agree to the privacy policy and consent to data processing for account use.
-                  </label>
+                  <div className="space-y-1">
+                    <label htmlFor="gdpr-consent" className="text-sm leading-6 text-slate-300 block">
+                      I agree to the privacy policy and consent to data processing for account use.
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => onNavigate('privacy')}
+                      className="text-sm font-medium text-cyan-300 hover:text-cyan-200"
+                    >
+                      Read the full privacy policy
+                    </button>
+                  </div>
                 </div>
 
                 {error ? (

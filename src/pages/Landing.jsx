@@ -32,6 +32,13 @@ export default function Landing({ onNavigate }) {
                 >
                   Preview recommendations
                 </button>
+                <button
+                  type="button"
+                  onClick={() => onNavigate('privacy')}
+                  className="rounded-full border border-transparent bg-slate-950/80 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                >
+                  Privacy policy
+                </button>
               </div>
             </div>
           </div>

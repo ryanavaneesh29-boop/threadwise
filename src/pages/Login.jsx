@@ -111,7 +111,7 @@ export default function Login({ onLogin, onNavigate }) {
                 </button>
               </form>
 
-              <div className="mt-6 flex items-center justify-between text-sm text-slate-400">
+              <div className="mt-6 flex flex-col gap-3 text-sm text-slate-400 sm:flex-row sm:items-center sm:justify-between">
                 <button
                   type="button"
                   onClick={() => onNavigate('reset-password')}
@@ -119,13 +119,22 @@ export default function Login({ onLogin, onNavigate }) {
                 >
                   Forgot password?
                 </button>
-                <button
-                  type="button"
-                  onClick={() => onNavigate('register')}
-                  className="font-medium text-indigo-300 hover:text-indigo-200"
-                >
-                  Register
-                </button>
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => onNavigate('privacy')}
+                    className="font-medium text-cyan-300 hover:text-cyan-200"
+                  >
+                    Privacy policy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onNavigate('register')}
+                    className="font-medium text-indigo-300 hover:text-indigo-200"
+                  >
+                    Register
+                  </button>
+                </div>
               </div>
             </div>
           </div>

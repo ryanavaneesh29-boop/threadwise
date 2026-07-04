@@ -1,4 +1,8 @@
+import { supabase } from '../services/supabaseClient'
+
 const USERS_KEY = 'threadwise-users'
+
+export const hasSupabase = Boolean(supabase)
 
 export const getStoredUsers = () => {
   try {
@@ -28,8 +32,20 @@ export const isEmailValid = (email) => {
 
 export const registerUser = async (email, password) => {
   const normalizedEmail = email.trim().toLowerCase()
-  const users = getStoredUsers()
 
+  if (hasSupabase) {
+    const { data, error } = await supabase.auth.signUp({ email: normalizedEmail, password })
+    if (error) {
+      throw new Error(error.message || 'Unable to register with Supabase.')
+    }
+    return {
+      email: data.user?.email || normalizedEmail,
+      session: data.session || null,
+      user: data.user || null
+    }
+  }
+
+  const users = getStoredUsers()
   if (users.some((user) => user.email === normalizedEmail)) {
     throw new Error('An account already exists for this email.')
   }
@@ -46,12 +62,54 @@ export const registerUser = async (email, password) => {
 
 export const getUserByEmail = (email) => {
   const normalizedEmail = email.trim().toLowerCase()
+  if (hasSupabase) {
+    return { email: normalizedEmail }
+  }
   return getStoredUsers().find((user) => user.email === normalizedEmail) || null
+}
+
+export const deleteUserByEmail = async (email) => {
+  const normalizedEmail = email.trim().toLowerCase()
+  if (hasSupabase) {
+    await supabase.auth.signOut()
+    return false
+  }
+
+  const users = getStoredUsers()
+  const remainingUsers = users.filter((user) => user.email !== normalizedEmail)
+  saveUsers(remainingUsers)
+  return users.length !== remainingUsers.length
 }
 
 export const verifyLogin = async (email, password) => {
   const normalizedEmail = email.trim().toLowerCase()
+
+  if (hasSupabase) {
+    const { data, error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password })
+    if (error) {
+      return null
+    }
+    return { email: data.user?.email || normalizedEmail, session: data.session || null, user: data.user || null }
+  }
+
   const users = getStoredUsers()
   const hashedPassword = await hashPassword(password)
   return users.find((user) => user.email === normalizedEmail && user.password === hashedPassword) || null
+}
+
+export const signOut = async () => {
+  if (hasSupabase) {
+    await supabase.auth.signOut()
+  }
+}
+
+export const getAuthSession = async () => {
+  if (!hasSupabase) {
+    return null
+  }
+  const { data, error } = await supabase.auth.getSession()
+  if (error) {
+    return null
+  }
+  return data.session
 }
