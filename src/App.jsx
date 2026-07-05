@@ -20,13 +20,17 @@ export default function App() {
     const initializeAuth = async () => {
       const search = new URLSearchParams(window.location.search)
       const resetToken = search.get('token') || search.get('reset-token')
+      const accessToken = search.get('access_token')
+      const type = search.get('type')
+      const isRecoveryLink = accessToken && type === 'recovery'
+
       const session = hasSupabase ? await getAuthSession() : null
       const loggedIn = session || localStorage.getItem('threadwise-logged-in') === 'true'
       const email = localStorage.getItem('threadwise-user-email') || ''
       const hasRegisteredUser = email && getUserByEmail(email)
       setIsAuthenticated(Boolean(loggedIn && hasRegisteredUser))
 
-      if (resetToken) {
+      if (isRecoveryLink || resetToken) {
         setCurrentPage('reset-password')
         return
       }

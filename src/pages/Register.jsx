@@ -43,6 +43,14 @@ export default function Register({ onRegister, onNavigate }) {
     setLoading(true)
     try {
       const registeredUser = await registerUser(email, password)
+      if (registeredUser?.requiresConfirmation) {
+        setMessage('Account created. Check your email to confirm before logging in.')
+        setEmail('')
+        setPassword('')
+        setConfirm('')
+        setAgreed(false)
+        return
+      }
       if (registeredUser?.email) {
         onRegister?.(registeredUser.email)
       } else {

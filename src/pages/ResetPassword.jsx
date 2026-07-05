@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react'
+import { hasSupabase, requestPasswordReset } from '../utils/auth'
+import { supabase } from '../services/supabaseClient'
 
 const rawApiUrl = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL
 const apiBase = rawApiUrl
@@ -9,6 +11,7 @@ export default function ResetPassword({ onNavigate }) {
   const [stage, setStage] = useState('request')
   const [email, setEmail] = useState('')
   const [token, setToken] = useState('')
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false)
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [message, setMessage] = useState('')
@@ -16,12 +19,31 @@ export default function ResetPassword({ onNavigate }) {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    const search = new URLSearchParams(window.location.search)
-    const resetToken = search.get('token') || search.get('reset-token')
-    if (resetToken) {
-      setToken(resetToken)
-      setStage('confirm')
+    const initialize = async () => {
+      const search = new URLSearchParams(window.location.search)
+      const resetToken = search.get('token') || search.get('reset-token')
+      const accessToken = search.get('access_token')
+      const refreshToken = search.get('refresh_token')
+      const type = search.get('type')
+      const recoveryLink = accessToken && type === 'recovery'
+
+      if (recoveryLink) {
+        setIsRecoveryMode(true)
+        setStage('confirm')
+
+        if (hasSupabase) {
+          await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+        }
+        return
+      }
+
+      if (resetToken) {
+        setToken(resetToken)
+        setStage('confirm')
+      }
     }
+
+    initialize()
   }, [])
 
   const sendResetLink = async (event) => {
@@ -36,17 +58,26 @@ export default function ResetPassword({ onNavigate }) {
 
     setLoading(true)
     try {
-      const response = await fetch(`${apiBase}/api/auth/reset-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim() })
-      })
-
-      const result = await response.json()
-      if (!response.ok) {
-        setError(result.error || 'Could not send reset link. Please try again.')
+      if (hasSupabase) {
+        const { error } = await requestPasswordReset(email.trim())
+        if (error) {
+          setError(error.message || 'Could not send reset link. Please try again.')
+        } else {
+          setMessage('Reset link sent. Check your inbox.')
+        }
       } else {
-        setMessage(result.message || 'Reset link sent. Check your inbox.')
+        const response = await fetch(`${apiBase}/api/auth/reset-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim() })
+        })
+
+        const result = await response.json()
+        if (!response.ok) {
+          setError(result.error || 'Could not send reset link. Please try again.')
+        } else {
+          setMessage(result.message || 'Reset link sent. Check your inbox.')
+        }
       }
     } catch (err) {
       setError('Unable to reach the server. Try again later.')
@@ -68,24 +99,34 @@ export default function ResetPassword({ onNavigate }) {
       setError('Passwords do not match.')
       return
     }
-    if (!token) {
-      setError('Reset token is missing. Please use the link from your email.')
-      return
-    }
 
     setLoading(true)
     try {
-      const response = await fetch(`${apiBase}/api/auth/confirm-reset`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, password: password.trim() })
-      })
-
-      const result = await response.json()
-      if (!response.ok) {
-        setError(result.error || 'Unable to reset your password.')
+      if (hasSupabase) {
+        const { data, error } = await supabase.auth.updateUser({ password: password.trim() })
+        if (error) {
+          setError(error.message || 'Unable to reset your password.')
+        } else {
+          setMessage('Password reset successful. You may now log in.')
+        }
       } else {
-        setMessage(result.message || 'Password reset successful. You may now log in.')
+        if (!token) {
+          setError('Reset token is missing. Please use the link from your email.')
+          return
+        }
+
+        const response = await fetch(`${apiBase}/api/auth/confirm-reset`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, password: password.trim() })
+        })
+
+        const result = await response.json()
+        if (!response.ok) {
+          setError(result.error || 'Unable to reset your password.')
+        } else {
+          setMessage(result.message || 'Password reset successful. You may now log in.')
+        }
       }
     } catch (err) {
       setError('Unable to reach the server. Try again later.')

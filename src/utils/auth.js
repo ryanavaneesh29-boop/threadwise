@@ -38,10 +38,13 @@ export const registerUser = async (email, password) => {
     if (error) {
       throw new Error(error.message || 'Unable to register with Supabase.')
     }
+
+    const requiresConfirmation = !data.session
     return {
       email: data.user?.email || normalizedEmail,
       session: data.session || null,
-      user: data.user || null
+      user: data.user || null,
+      requiresConfirmation
     }
   }
 
@@ -87,14 +90,26 @@ export const verifyLogin = async (email, password) => {
   if (hasSupabase) {
     const { data, error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password })
     if (error) {
-      return null
+      return { user: null, error }
     }
-    return { email: data.user?.email || normalizedEmail, session: data.session || null, user: data.user || null }
+    return { user: { email: data.user?.email || normalizedEmail, session: data.session, user: data.user }, error: null }
   }
 
   const users = getStoredUsers()
   const hashedPassword = await hashPassword(password)
-  return users.find((user) => user.email === normalizedEmail && user.password === hashedPassword) || null
+  const foundUser = users.find((user) => user.email === normalizedEmail && user.password === hashedPassword) || null
+  return { user: foundUser, error: null }
+}
+
+export const requestPasswordReset = async (email) => {
+  const normalizedEmail = email.trim().toLowerCase()
+  if (hasSupabase) {
+    const { data, error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+      redirectTo: window.location.origin + '/reset-password'
+    })
+    return { data, error }
+  }
+  return null
 }
 
 export const signOut = async () => {

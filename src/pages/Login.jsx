@@ -23,7 +23,11 @@ export default function Login({ onLogin, onNavigate }) {
 
     setLoading(true)
     try {
-      const user = await verifyLogin(email, password)
+      const { user, error: loginError } = await verifyLogin(email, password)
+      if (loginError) {
+        setError(loginError.message || 'Email or password is incorrect. Please try again.')
+        return
+      }
       if (!user) {
         setError('Email or password is incorrect. Please try again or register a new account.')
         return
